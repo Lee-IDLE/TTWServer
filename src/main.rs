@@ -1,3 +1,5 @@
+use Communication::CommunicationManager;
+
 fn main() {
-    println!("Hello, world!");
+    let comm = CommunicationManager();
 }
