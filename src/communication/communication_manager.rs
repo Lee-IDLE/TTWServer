@@ -1,24 +1,24 @@
-use tokio::netTcpListener;
+use tokio::net::TcpListener;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
-struct CommunicationManager{
+pub struct Communication_Manager{
     ip: String,
-    port: int,
+    port: u16,
 }
 
-impl CommunicationManager{
-    fn new(ip: String, port: int) -> Slef {
+impl Communication_Manager{
+    pub fn new(ip: String, port: u16) -> Self {
         Self { ip, port}
     }
 
-    fn new() -> Self {
+    pub fn default() -> Self {
         Self { 
-            ip: "127.0.0.1".toString(),
+            ip: "127.0.0.1".to_string(),
             port: 8080
          }
     }
 
-    async fn handle_client(mut socket: tokio::net::TcpStream) {
+    pub async fn handle_client(mut socket: tokio::net::TcpStream) {
         let mut buffer = [0; 1024];
         let mut n = 0;
         // 클라이언트로부터 비동기로 데이터 읽기
@@ -30,7 +30,7 @@ impl CommunicationManager{
         }
     }
     
-    fn test() {
+    pub async fn test(self: Self) {
         let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
         println!("Server is running on 127.0.0.1:8080");
     
@@ -39,13 +39,13 @@ impl CommunicationManager{
     
             // 비동기로 클라이언트 처리
             tokio::spawn(async move {
-                handle_client(socket).await;
-            })
+                Self::handle_client(socket).await
+            });
         }
     }
 }
 
-impl Drop for CommunicationManager{
+impl Drop for Communication_Manager{
     fn drop(&mut self) {
         println!("Drop the bit!");
     }
