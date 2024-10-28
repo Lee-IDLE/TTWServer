@@ -3,6 +3,13 @@ use std::net::{SocketAddr, TcpStream};
 
 use tokio::net::{TcpListener, TcpStream as TokioTCPStream};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio_tungstenite::{
+    accept_async, 
+    tungstenite::protocol::Message,
+    tungstenite::Message::*
+};
+use serde_json::{Result, value};
+use futures::{StreamExt, SinkExt};
 use http_body_util::Full;
 use http_body::Body;
 use hyper::{
@@ -26,40 +33,57 @@ pub struct Communication_Manager{
     port: u16,
 }
 
-// mut socket: tokio::net::TcpStream
-pub async fn handle_client(temp: Request<hyper::body::Incoming>) -> Result<Response<Full<Bytes>>, Infallible> {
-    Ok(
-        Response::new(Full::new(Bytes::from("success")))
-    )
-    /*
-    let mut buffer = [0; 1024];
-    let mut n = 0;
-    // 클라이언트로부터 비동기로 데이터 읽기
-    match socket.read(&mut buffer).await {
-        Ok(n) => {
-            println!("연결 성공 및 데이터 전송!");
-            socket.write_all(b"success").await.unwrap();
-        },
-        Err(e) => println!("Data receive fail: {}", e)
-    }
-    */
+fn handle_json_message(json_str: &str) -> Result<()> {
+    let v = serde_json::from_str(json_str)?;
+    println!("Received Json Message: {:?}", v);
+    Ok(())
 }
 
-#[derive(Clone)]
-// An Executor that uses the tokio runtime.
-pub struct TokioExecutor;
+pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
+    println!("Incoming TCP connection from: {}", addr);
 
-// Implement the `hyper::rt::Executor` trait for `TokioExecutor` so that it can be used to spawn
-// tasks in the hyper runtime.
-// An Executor allows us to manage execution of tasks which can help us improve the efficiency and
-// scalability of the server.
-impl<F> hyper::rt::Executor<F> for TokioExecutor
-where
-    F: std::future::Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    fn execute(&self, fut: F) {
-        tokio::task::spawn(fut);
+    let ws_stream = accept_async(stream)
+        .await
+        .expect("Error during the websocket handshake occureed");
+    println!("Websocekt connection established: {}", addr);
+    
+    let (mut write, mut read) = ws_stream.split();
+
+    loop {
+        tokio::select! {
+            Some(msg) = read.next() => {
+                match msg {
+                    Ok(Message::Text(text)) => {
+                        // 텍스트가 JSON형식인지 확인
+                        if let Ok(()) = handle_json_message(&text) {
+
+                        } else {
+                            // JSON 메시지가 아님
+                            println!("What the fucking is that?")
+                        }
+                    }
+                    Ok(Message::Binary(bin)) => {
+                        println!("Received a binary message from {}: {:?}", addr, bin)
+                    }
+                    Ok(Message::Ping(ping)) => {
+                        let _ = write.send(Message::Pong(ping)).await;
+                    }
+                    Ok(Message::Close(_)) => {
+                        println!("Connection closed by {}", addr);
+                        break;
+                    }
+                    Err(e) => {
+                        println!("Error receiving message: {}", e);
+                        break;
+                    }
+                    _ => break
+                }
+            }
+            _ = write.close() => {
+                println!("Connection close {}", addr);
+                break;
+            }
+        }
     }
 }
 
@@ -76,38 +100,17 @@ impl Communication_Manager{
     }
     
     pub async fn test(self: Self) {
-        let addr = SocketAddr::from(([127, 0, 0, 1], 8080));
-        let listener = TcpListener::bind(addr).await.unwrap();
-        
-        loop {
-            let (stream, _) = listener.accept().await.unwrap();
+        let mut addr = self.ip.clone();
+        addr.push_str(":");
+        addr.push_str(self.port.to_string().as_str());
 
-            let io = TokioIo::new(stream);
+        let tcpSocket = TcpListener::bind(&addr).await;
+        let listener = tcpSocket.expect("Fail to bind");
+        println!("Listening on: {}", addr);
 
-            tokio::task::spawn(async move {
-                match http2::Builder::new(TokioExecutor)
-                    .serve_connection(io, service_fn(handle_client))
-                    .await
-                {
-                    Ok(_) => { println!("connection success") },
-                    Err(err) => {eprintln!("Error serving connection: {}", err )}
-                }
-            });
+        while let Ok((stream, addr)) = listener.accept().await {
+            tokio::spawn(handle_client(stream, addr));
         }
-        /*
-        let listener = TcpListener::bind("127.0.0.1:8080").await.unwrap();
-        println!("Server is running on 127.0.0.1:8080");
-    
-        loop {
-            println!("연결 대기!");
-            let (socket, _) = listener.accept().await.unwrap();
-            println!("연결 성공!");
-            // 비동기로 클라이언트 처리
-            tokio::spawn(async move {
-                Self::handle_client(socket).await
-            });
-        }
-        */
     }
 }
 
