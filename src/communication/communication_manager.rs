@@ -34,7 +34,17 @@ pub struct Communication_Manager{
 }
 
 fn handle_json_message(json_str: &str) -> Result<()> {
-    let v = serde_json::from_str(json_str)?;
+    // 정규 표현식을 사용하여 JSON 데이터에서 이상한 문자열 제거
+    /*
+    let re = regex::Regex::new(r#"[^{}\[\]:,"a-zA-Z0-9\s]"#).unwrap();
+    let cleaned_json_str = re.replace_all(json_str, "");
+    let cleaned_json_str = cleaned_json_str.as_ref();
+    */
+
+    let v = match serde_json::from_str(json_str){
+        Ok(s) => s,
+        Err(e) => { println!("parsing err: {:?}", e) }
+    };//cleaned_json_str
     println!("Received Json Message: {:?}", v);
     Ok(())
 }
@@ -56,10 +66,10 @@ pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
                     Ok(Message::Text(text)) => {
                         // 텍스트가 JSON형식인지 확인
                         if let Ok(()) = handle_json_message(&text) {
-
+                            println!("Receive Data: {}", text);
                         } else {
                             // JSON 메시지가 아님
-                            println!("What the fucking is that?")
+                            println!("What the fucking is that?");
                         }
                     }
                     Ok(Message::Binary(bin)) => {
@@ -79,12 +89,15 @@ pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
                     _ => break
                 }
             }
+            /*
             _ = write.close() => {
                 println!("Connection close {}", addr);
                 break;
             }
+            */
         }
     }
+    write.close().await;
 }
 
 impl Communication_Manager{
