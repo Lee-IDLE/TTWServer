@@ -1,28 +1,10 @@
-use std::convert::Infallible;
-use std::net::{SocketAddr, TcpStream};
+use std::net::SocketAddr;
 
 use tokio::net::{TcpListener, TcpStream as TokioTCPStream};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
-use tokio_tungstenite::{
-    accept_async, 
-    tungstenite::protocol::Message,
-    tungstenite::Message::*
-};
-use serde_json::{Result as serde_result, Value};
+use tokio_tungstenite::{accept_async, tungstenite::protocol::Message};
+use serde_json::Value;
+
 use futures::{StreamExt, SinkExt};
-use http_body_util::Full;
-use http_body::Body;
-use hyper::{
-    service::service_fn,
-    body,
-    body::Bytes,
-    Request,
-    Response,
-    server::conn::http2,
-    Uri,
-    rt,
-    Version,
-};
 
 #[path = "../services/mod.rs"]
 mod service;
