@@ -8,7 +8,7 @@ use tokio_tungstenite::{
     tungstenite::protocol::Message,
     tungstenite::Message::*
 };
-use serde_json::{Result, value};
+use serde_json::{Result as serde_result, Value};
 use futures::{StreamExt, SinkExt};
 use http_body_util::Full;
 use http_body::Body;
@@ -24,6 +24,10 @@ use hyper::{
     Version,
 };
 
+#[path = "../services/mod.rs"]
+mod service;
+use service::communication_service;
+
 #[path="../support/mod.rs"]
 mod support;
 use support::TokioIo;
@@ -33,20 +37,22 @@ pub struct Communication_Manager{
     port: u16,
 }
 
-fn handle_json_message(json_str: &str) -> Result<()> {
-    // 정규 표현식을 사용하여 JSON 데이터에서 이상한 문자열 제거
-    /*
-    let re = regex::Regex::new(r#"[^{}\[\]:,"a-zA-Z0-9\s]"#).unwrap();
-    let cleaned_json_str = re.replace_all(json_str, "");
-    let cleaned_json_str = cleaned_json_str.as_ref();
-    */
-
-    let v = match serde_json::from_str(json_str){
-        Ok(s) => s,
-        Err(e) => { println!("parsing err: {:?}", e) }
-    };//cleaned_json_str
-    println!("Received Json Message: {:?}", v);
-    Ok(())
+enum JsonParseError{
+    InvalidJson,
+    MissingField,
+}
+// json 메시지가 맞는지 확인
+fn handle_json_message(json_str: &str) -> Result<Value, JsonParseError> {
+    println!("Received Json Message: {:?}", json_str);
+    match serde_json::from_str(json_str) {
+        Ok(value) => {
+            Ok(value)
+        }
+        Err(_) => {
+            println!("Parsing Error");
+            Err(JsonParseError::InvalidJson)
+        }
+    }
 }
 
 pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
@@ -57,16 +63,16 @@ pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
         .expect("Error during the websocket handshake occureed");
     println!("Websocekt connection established: {}", addr);
     
-    let (mut write, mut read) = ws_stream.split();
+    let (mut sender, mut receiver) = ws_stream.split();
 
     loop {
         tokio::select! {
-            Some(msg) = read.next() => {
+            Some(msg) = receiver.next() => {
                 match msg {
                     Ok(Message::Text(text)) => {
                         // 텍스트가 JSON형식인지 확인
-                        if let Ok(()) = handle_json_message(&text) {
-                            println!("Receive Data: {}", text);
+                        if let Ok(value) = handle_json_message(&text) {
+                            communication_service::category_processing(value);
                         } else {
                             // JSON 메시지가 아님
                             println!("What the fucking is that?");
@@ -76,7 +82,7 @@ pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
                         println!("Received a binary message from {}: {:?}", addr, bin)
                     }
                     Ok(Message::Ping(ping)) => {
-                        let _ = write.send(Message::Pong(ping)).await;
+                        let _ = sender.send(Message::Pong(ping)).await;
                     }
                     Ok(Message::Close(_)) => {
                         println!("Connection closed by {}", addr);
@@ -97,7 +103,7 @@ pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
             */
         }
     }
-    write.close().await;
+    sender.close().await;
 }
 
 impl Communication_Manager{
