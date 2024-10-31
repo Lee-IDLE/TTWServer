@@ -12,7 +12,6 @@ use service::communication_service;
 
 #[path="../support/mod.rs"]
 mod support;
-use support::TokioIo;
 
 pub struct Communication_Manager{
     ip: String,

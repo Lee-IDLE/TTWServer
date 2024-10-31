@@ -7,6 +7,8 @@ pub fn category_processing(value: Value){
                 for item in data {
                     let id = item.get("id").and_then(|id| id.as_str()).unwrap();
                     let password = item.get("password").and_then(|password| password.as_str()).unwrap();
+
+                    
                 }
             }
         }
