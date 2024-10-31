@@ -1,4 +1,5 @@
-use mongodb::{Client, options::ClientOptions};
+use hyper::client;
+use mongodb::{bson::doc, error::Error, options::ClientOptions, Client, Collection, Database};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -8,16 +9,37 @@ struct User {
 }
 
 pub struct Db_Manager {
-    Uri: String
+    dbUri: String
+}
+
+pub enum DbError {
+    MongoError,
+    DocumentNotFound,
 }
 
 impl Db_Manager{
     pub fn new() -> Self {
-        Self { Uri : "mongodb://localhost:27017".to_string() }
+        Self { dbUri: "mongodb://localhost:27017/ttwDB".to_string()}
     }
 
-    pub async fn CreateTest(self: Self) -> mongodb::error::Result<()> {
-        let client = Client::with_uri_str(self.Uri).await?;
+    pub async fn login_process(self: Self, userId: String, userPassword: String) -> mongodb::error::Result<()> {
+        let client = Client::with_uri_str(self.dbUri).await?;
+        let db = client.database("ttwDB");
+        let collection: Collection<User> = db.collection("Users");
+
+        // 쿼리 필터
+        let filter = doc! { "UserId": &userId, "UserPassword": &userPassword };
+        // 문서 조회
+        let document = collection.find_one(filter).await?;
+        match document {
+            Some(_) => println!("Login Success!!"),
+            None => println!("Login Faile - Id: {}, Password: {}", &userId, &userPassword),
+        }
+        Ok(())
+    }
+
+    async fn connection(self: Self) -> mongodb::error::Result<()> {
+        let client = Client::with_uri_str(self.dbUri).await?;
         let db = client.database("ttwDB");
         let collection = db.collection("Users");
 

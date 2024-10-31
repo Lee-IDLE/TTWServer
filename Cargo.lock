@@ -12,6 +12,7 @@ dependencies = [
  "http-body-util",
  "hyper",
  "mongodb",
+ "once_cell",
  "pin-project-lite",
  "regex",
  "serde",
