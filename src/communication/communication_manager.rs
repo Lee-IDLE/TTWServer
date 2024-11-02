@@ -62,11 +62,12 @@ pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
     loop {
         tokio::select! {
             Some(msg) = receiver.next() => {
+                let mut result = String::new();
                 match msg {
                     Ok(Message::Text(text)) => {
                         // 텍스트가 JSON형식인지 확인
                         if let Ok(value) = handle_json_message(&text) {
-                            communication_service::category_processing(value, &get_db_instance().await);
+                            result = communication_service::category_processing(value, &get_db_instance().await).await;
                         } else {
                             // JSON 메시지가 아님
                             println!("What the fucking is that?");
@@ -87,6 +88,10 @@ pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
                         break;
                     }
                     _ => break
+                };
+
+                if let Err(e) = sender.send(Message::Text(result.clone())).await {
+                    eprintln!("Send Message Faile. {:?} / Message : {}", addr, result);
                 }
             }
             /*
