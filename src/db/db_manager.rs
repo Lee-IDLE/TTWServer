@@ -20,13 +20,14 @@ impl Db_Manager{
         Self { dbUri: "mongodb://localhost:27017/ttwDB".to_string()}
     }
 
-    pub async fn login_process(self: &Self, userId: String, userPassword: String) -> Result<(), mongodb::error::Error> {
+    pub async fn login_search(self: &Self, userId: String, userPassword: String) -> Result<(), mongodb::error::Error> {
         let client = Client::with_uri_str(&self.dbUri).await?;
         let db = client.database("ttwDB");
         let collection: Collection<user::User> = db.collection("Users");
 
         // 쿼리 필터
         let filter = doc! { "UserId": &userId, "UserPassword": &userPassword };
+        
         // 문서 조회
         let document = collection.find_one(filter).await?;
         match document {

@@ -91,7 +91,7 @@ pub async fn handle_client(stream: TokioTCPStream, addr: SocketAddr){
                 };
 
                 if let Err(e) = sender.send(Message::Text(result.clone())).await {
-                    eprintln!("Send Message Faile. {:?} / Message : {}", addr, result);
+                    eprintln!("Send Message Faile. {:?} / Ip: {} / Message : {}", e, addr, result);
                 }
             }
             /*
