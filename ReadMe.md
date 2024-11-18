@@ -9,7 +9,7 @@ https://engineering.linecorp.com/ko/blog/the-architecture-behind-chatting-on-lin
 https://velog.io/@murphytklee/%EC%B1%84%ED%8C%85-%EC%8B%9C%EC%8A%A4%ED%85%9C-NoSQL-%ED%8A%B9%EC%84%B1-%EB%B0%8F-%EB%B9%84%EA%B5%90-%EB%B6%84%EC%84%9D-CAP-PACELC
 
 ### 로그인
-{"command": "": data:["id":"", "password":""]}
+{"category": "": data:["id":"", "password":""]}
 
 ### DB
 Redis(인메모리 NoSQL), MongoDB(문서 지향 NoSQL), PostgreSQL, graphQL, Cassandra(분산 NoSQL)

@@ -36,7 +36,8 @@ async fn login_processing(value: Value, db: &Arc<Db_Manager>) -> String {
                         "Category": "login",
                         "Data": [
                             {
-                                "Result": "success"
+                                "Result": "success",
+                                "Message": ""
                             }
                         ]
                     });
